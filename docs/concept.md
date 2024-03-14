@@ -1,0 +1,2 @@
+- a data layer that contains all the type mappings to tables, etc.
+- a router layer that can execute query and mutation procedures on your database safely.

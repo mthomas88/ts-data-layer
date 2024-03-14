@@ -1,4 +1,4 @@
-// ts-sql-layer core
+// ts-data-mapper core
 
 type Logger = {
   info: (message: string, ...args: unknown[]) => void;

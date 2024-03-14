@@ -14,6 +14,7 @@ type ColArgs = {
   isPolyKey?: boolean;
   isAutoIncrement?: boolean;
   isIndexed?: boolean;
+  isDebug?: boolean;
 };
 
 type IdxArgs = {
