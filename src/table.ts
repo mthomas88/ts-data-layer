@@ -1,4 +1,7 @@
 import { nanoid } from "nanoid";
+import getDebugger from "./debugger";
+
+const { debug } = getDebugger();
 
 type ColArgs = {
   colName: string;
@@ -38,6 +41,8 @@ type TableArgs = {
 
 const table = (args: TableArgs) => {
   const _id = nanoid();
+
+  debug(`created table with id [${_id}]`);
 
   const _name = args.prefix
     ? `${args.prefix}${args.prefixSeperator}${args.name}`
