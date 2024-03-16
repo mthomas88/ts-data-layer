@@ -1,6 +1,6 @@
 {
   "name": "@mthomas88/ts-data-mapper",
-  "version": "0.1.0",
+  "version": "0.0.3",
   "main": "index.js",
   "license": "MIT",
   "publishConfig": {
