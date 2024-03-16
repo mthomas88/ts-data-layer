@@ -1,5 +1,5 @@
 import b, { suite } from "benny";
-import { makeTableWithPrefix } from "../test/helpers";
+import { makeTableWithPrefix } from "../src/helpers";
 
 b.suite(
   "ts-data-mapper-benchmark-uite",

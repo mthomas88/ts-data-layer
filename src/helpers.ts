@@ -1,7 +1,7 @@
-import table from "../src/table";
+import table from "./table";
 
-export const makeTableWithPrefix = () =>
-  table({
+export const makeTableWithPrefix = () => {
+  const t = table({
     debug: true,
     name: "test",
     prefix: "tbl",
@@ -10,16 +10,20 @@ export const makeTableWithPrefix = () =>
     createIfNotExists: true,
     columns: [
       {
-        colName: "testColumn",
+        name: "testColumn",
         dataType: "number",
         nullable: true,
-        colPrefix: "pk",
+        prefix: "pk",
       },
       {
-        colName: "testColumn",
+        name: "testColumn",
         dataType: "string",
         nullable: false,
-        colPrefix: "fk",
+        prefix: "fk",
       },
     ],
   });
+
+  return t;
+}
+  

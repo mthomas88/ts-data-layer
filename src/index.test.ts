@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import data_layer from "../src";
+import data_layer from ".";
 
 const app = data_layer({
   logger: {

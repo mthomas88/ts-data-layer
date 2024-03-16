@@ -2,16 +2,19 @@
   "name": "@mthomas88/ts-data-mapper",
   "version": "0.0.3",
   "main": "index.js",
-  "private": false,
   "license": "MIT",
   "scripts": {
+    "cli": "ts-node ./src/cli.ts",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "benchmark": "ts-node ./benchmarks/index.ts"
+    "benchmark": "ts-node ./benchmarks/index.ts",
+    "coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",
+    "@types/minimist": "^1.2.5",
     "@types/node": "^20.11.27",
+    "@vitest/coverage-v8": "^1.4.0",
     "benny": "^3.7.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.2",
@@ -19,6 +22,9 @@
   },
   "dependencies": {
     "debug": "^4.3.4",
-    "nanoid": "3"
-  }
+    "minimist": "^1.2.8",
+    "nanoid": "3",
+    "typebox": "^0.0.1"
+  },
+  "packageManager": "yarn@4.1.1"
 }
