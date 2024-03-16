@@ -5,8 +5,8 @@
   "license": "MIT",
   "scripts": {
     "cli": "ts-node ./src/cli.ts",
-    "test": "vitest",
-    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "watch-tests": "vitest watch",
     "benchmark": "ts-node ./benchmarks/index.ts",
     "coverage": "vitest run --coverage",
     "commit": "cz",
