@@ -8,7 +8,8 @@
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "benchmark": "ts-node ./benchmarks/index.ts",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "commit": "cz"
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",

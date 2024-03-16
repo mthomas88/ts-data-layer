@@ -132,29 +132,56 @@ type Command<T extends Function = Function> = {
     flags?: Flag[];
 }
 
-const commands: Command[] = [
-    {
-        name: 'Introspect Datasource',
-        key: 'introspect',
-        description: 'Introspect your datasource to generate typesafe models for your workspace',
-        cmd: () => {
-            console.log('Am command!');
-        }
-    }
-]
-const whitespace = (x?: () => void, spaces = 4) => process.stdout.write(`${Array.from({ length: spaces }).reduce<string>((a) => a += ` `, '')}${!!x ? x() : new String()}`);
+const cmdFunc = (x: string, b: number) => console.log(x);
 
-const outputCommandList = (commands: Command[]) => {
+const commands = {
+    introspect: {
+        name: 'Introspect Datasource',
+        description: 'Introspect your datasource to generate typesafe models for your workspace',
+        cmd: cmdFunc
+    }
+} as const;
+
+type CommandKeys = keyof typeof commands;
+
+const whitespace = (x?: () => void, spaces = 4) => {
+    const spc = Array.from({ length: spaces }).reduce<string>((a) => a += ` `, '');
+    process.stdout.write(`${spc}`);
+
+    if (x) {
+        x();
+    }
+};
+
+const unpad = (s: string) => s.trim();
+
+const outputCommandList = (cmds: typeof commands) => {
     newLine();
 
     white(`Usage: `);
 
-    commands.forEach((command) => {
-        whitespace();
-        whitespace(() => cyan(`${command.key}`, false));
-        whitespace(() => yellow(`${command.name}:`, false));
-        white(` ${command.description}`);
+    whitespace();
+
+    whitespace(() => white(`[command]`, false));
+
+    whitespace(() => {
+        white(' [name]', false);
+        white('  ', false);
     });
+
+    Array.from({ length: 4 }).forEach(() => whitespace());
+
+    white('[description]');
+
+    Object.entries(cmds).forEach(([key, command]) => {
+        whitespace();
+        whitespace(() => cyan(`${unpad(key)}`, false));
+        whitespace(() => {
+            yellow(unpad(command.name), false);
+            white('  ', false);
+        });
+        white(unpad(command.description));
+    })
 
     newLine();
 }
@@ -168,28 +195,93 @@ const outputSpecs = () => {
     white(`current time: ${new Date()}`);
     white(`connected datasources: `, false)
     cyan(`[none]`)
-
     separator();
 }
 
+class CliError extends Error { };
+
 const separator = () => white(`${Array.from({ length: process.stdout.columns }).reduce((a, b) => a += '-', '')}`);
+
+const validateIsCommand = (cmd: unknown): cmd is CommandKeys => {
+    const keys = Object.keys(commands) as [CommandKeys];
+
+    if (typeof cmd !== 'string') {
+        return false;
+    }
+
+    const hasKey = keys.some(x => x === cmd);
+
+    if (!hasKey) {
+        return false;
+    }
+
+    for (let v of keys) {
+        if (cmd === v) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+const getParametersForArgs = <TArg = CommandKeys>(key: TArg) => {
+    const _arguments = parseArgs();
+
+    if (key === 'introspect') {
+        return ['hello', 1] as [string, number];
+    }
+
+    throw new CliError('no valid resolver for command');
+}
+
+const _commandRouter = (cmd: CommandKeys | unknown) => {
+    if (!validateIsCommand(cmd)) {
+        throw new CliError(`invalid cmd ${cmd}`);
+    }
+
+    const command = commands[cmd];
+    const command_arguments = getParametersForArgs(cmd);
+
+    try {
+        command.cmd(...command_arguments);
+        return 0;
+    } catch (e) {
+        return 1;
+    }
+}
 
 (async () => {
     try {
         const args = parseArgs();
 
+
+
+        newLine();
         green(`Welcome to the ts-sql-layer cli`)
         green(`Version: ${VERSION}`);
+        green(`Authored by Michael Thomas: <mickey.ftw@gmail.com>`)
         newLine();
         separator();
 
         outputSpecs();
 
-        outputCommandList(commands);
+        if (!args._.length) {
+            outputCommandList(commands);
+        } else {
+            const commandKey = args._[0];
+            const result = _commandRouter(commandKey)
+
+            if (result === 0) {
+                green(`command ${commandKey} success`);
+            } else {
+                red(`command ${commandKey} failed`);
+            }
+        }
 
         succeeded();
     } catch (e) {
         logError(e);
+
 
         failed();
     }
