@@ -10,20 +10,28 @@ const mapArguments = <TArg>(acclimator: TArg, arg: unknown, idx: number) => {
     ...acclimator,
     [`arg${idx}`]: {
       jsType: typeof arg,
-      contents: arg
-    }
-  }
-}
+      contents: arg,
+    },
+  };
+};
 
-const writeDebug = (message: string, signature: string, ...objects: unknown[]) => {
+const writeDebug = (
+  message: string,
+  signature: string,
+  ...objects: unknown[]
+) => {
   const logMessage = {
     msg: message,
     signature: `${BASE_SIGNATURE}.${signature}`,
-    debugData: objects.reduce<Record<string, any>>(mapArguments<Record<string, any>>, {}) || {}
+    debugData:
+      objects.reduce<Record<string, any>>(
+        mapArguments<Record<string, any>>,
+        {}
+      ) || {},
   };
 
   debug(JSON.stringify(logMessage));
-}
+};
 
 type ColArgs = {
   name: string;
@@ -61,17 +69,17 @@ type TableArgs = {
   indexes?: IdxArgs[];
 };
 
-const genId = () => nanoid()
+const genId = () => nanoid();
 
 const genPrefix = (args: TableArgs | ColArgs) => {
   const prefix = args.prefix
-  ? `${args.prefix}${args.prefixSeperator}${args.name}`
-  : args.name;
+    ? `${args.prefix}${args.prefixSeperator}${args.name}`
+    : args.name;
 
   return prefix;
-}
+};
 
-const tblSig = 'ts_table';
+const tblSig = "ts_table";
 const table = (args: TableArgs) => {
   writeDebug(`table arguments`, tblSig, args);
 
@@ -96,12 +104,12 @@ const table = (args: TableArgs) => {
   return ret;
 };
 
-const colSig = 'ts_column';
+const colSig = "ts_column";
 const column = (args: ColArgs, tbl: ReturnType<typeof table>) => {
   writeDebug(`column args`, colSig, args, tbl);
-  
+
   const _id = genId();
-  
+
   writeDebug(`created column with id [${_id}]`, colSig);
 
   const _name = genPrefix(args);
@@ -114,12 +122,12 @@ const column = (args: ColArgs, tbl: ReturnType<typeof table>) => {
     dialect: tbl.dialect,
     isTmp: tbl.isTmp,
     isDebug: args.isDebug || tbl.isDebug || false,
-  }
+  };
 
   writeDebug(`generated table`, colSig, ret);
 
   return ret;
-}
+};
 
 export { table, column };
 

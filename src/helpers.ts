@@ -25,5 +25,4 @@ export const makeTableWithPrefix = () => {
   });
 
   return t;
-}
-  
+};
