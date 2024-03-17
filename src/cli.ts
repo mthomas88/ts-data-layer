@@ -250,12 +250,10 @@ const _commandRouter = (cmd: CommandKeys | unknown) => {
     }
 }
 
+const args = parseArgs();
+
 (async () => {
     try {
-        const args = parseArgs();
-
-
-
         newLine();
         green(`Welcome to the ts-sql-layer cli`)
         green(`Version: ${VERSION}`);
@@ -281,8 +279,7 @@ const _commandRouter = (cmd: CommandKeys | unknown) => {
         succeeded();
     } catch (e) {
         logError(e);
-
-
+        outputCommandList(commands);
         failed();
     }
 })();
