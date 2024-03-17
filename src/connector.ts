@@ -1,105 +1,161 @@
 import net from "net";
 import getDebugger from "./debugger";
 import crypto from "crypto";
-import { stringify } from "querystring";
+import { EventEmitter } from "stream";
+import { convertToHex } from "./utils";
 
 const { debug } = getDebugger();
 
-const loginStruct = {
-  username: "postgres",
-  database: "postgres",
-  password: "mysecretpassword",
+export type SQLConnector = PostgreSQL;
+
+type PostgreSQL = {
+  type: "tsdm-pgsql";
+  hostname: string;
+  username: string;
+  password: string;
+  ssl: boolean;
+  database: string;
+  port: number;
 };
 
-const getPostgresLoginBuf = () => {
+const getPostgresLoginBuf = (args: {
+  username: string;
+  password: string;
+  database: string;
+}) => {
   const bufs = [
     Buffer.from([0x00, 0x00, 0x00, 0x08]), // Length of the message (in bytes)
     Buffer.from([0x04, 0xd2, 0x16, 0x2f]), // PostgreSQL protocol version number (196608)
-    Buffer.from(`user=${loginStruct.username}\0`),
-    Buffer.from(`database=${loginStruct.database}\0`),
-    Buffer.from(`password=${loginStruct.password}\0`),
+    Buffer.from(`user=${args.username}\0`),
+    Buffer.from(`database=${args.database}\0`),
+    Buffer.from(`password=${args.password}\0`),
     Buffer.from(""),
   ];
 
   return Buffer.concat(bufs);
 };
 
-const convertToHex = (value: number) => {
-  return `0x` + value.toString(16);
-};
+/**
+ * This will parse the message buffer and return the CODE of the message.
+ * @param message {Buffer} the message returned from the postgresql server
+ * @returns {number} the number bytecode of the particiular position in the buffer
+ */
+const getMessageCode = (message: Buffer): number => message.readUInt32BE(1);
 
-export const connectToPostgresql = async () => {
-  const client = new net.Socket();
-  const message_queue: {
-    id: ReturnType<typeof crypto.randomUUID>;
-    hex_code: string;
-    hex_type: string;
-    raw_code: number;
-    raw_type: number;
-    message: Buffer;
-    received_at: Date;
-  }[] = [];
+/**
+ * This will parse the message buffer and return the TYPE of the message.
+ * @param message {Buffer} the message returned from the postgresql server
+ * @returns {number} the number bytecode of the particiular position in the buffer
+ */
+const getMessageType = (message: Buffer): number => message.readUInt8(0);
 
-  const parseMessage = (message: Buffer) => {
-    const _id = crypto.randomUUID();
-
-    const struct = {
-      id: _id,
-      message,
-      received_at: new Date(),
-    };
-
-    let ret = {
-      raw_type: -1,
-      _id,
-      raw_code: -1,
-      hex_type: "",
-      hex_code: "",
-    };
-
-    const typeByte = message.readUInt8(0);
-    const codeByte = message.readUInt32BE(1);
-
-    ret.hex_type = convertToHex(typeByte);
-    ret.hex_code = convertToHex(codeByte);
-
-    message_queue.push({
-      ...struct,
-      raw_code: codeByte,
-      raw_type: typeByte,
-      hex_type: ret.hex_type,
-      hex_code: ret.hex_code,
-    });
-
-    debug(
-      `message [queue_length=${message_queue.length}][id=${ret._id}][raw_type_byte=${ret.raw_type}][raw_code_byte=${ret.raw_code}][hex_type=${ret.hex_type}][hex_code=${ret.hex_code}]`
-    );
-    debug(`message ${message.toString("utf-8")}`);
-  };
+/**
+ * Parse the message incoming from the postgres server
+ * @param message
+ */
+const parseMessage = (message: Buffer) => {
+  const _id = crypto.randomUUID();
 
   const ret = {
-    ready: true,
-    client,
+    id: _id,
+    raw_type: -1,
+    raw_code: -1,
   };
 
-  const result = new Promise<{
-    ready: boolean;
-    client: net.Socket;
-  }>((resolve, reject) => {
+  const struct = {
+    id: _id,
+    message,
+    received_at: new Date(),
+  };
+
+  const typeByte = getMessageType(message);
+  const codeByte = getMessageCode(message);
+
+  debug(
+    `message [id=${ret.id}][raw_type_byte=${ret.raw_type}][raw_code_byte=${
+      ret.raw_code
+    }][hex_type=${convertToHex(ret.raw_type)}][hex_code=${convertToHex(
+      ret.raw_code
+    )}]`
+  );
+
+  debug(`message ${message.toString("utf-8")}`);
+
+  return {
+    ...struct,
+    code: codeByte,
+    type: typeByte,
+  };
+};
+
+type TQueueEntry = {
+  id: ReturnType<typeof crypto.randomUUID>;
+  code: number;
+  type: number;
+  message: Buffer;
+  received_at: Date;
+};
+
+type PgClient = {
+  ready: boolean;
+  client: net.Socket;
+  messageQueue: TQueueEntry[];
+  login: (username: string, password: string) => void;
+};
+
+type EventMap = {
+  "login.start": [{ username: string; password: string }];
+  "login.error": [Error];
+};
+
+export const getPostgresqlHandle = async (args: PostgreSQL) => {
+  const client = new net.Socket();
+  const messageQueue: TQueueEntry[] = [];
+  const $emit = new EventEmitter<EventMap>();
+
+  const handleLoginRequest = (login_args: {
+    username: string;
+    password: string;
+  }) => {
+    const authBuffer = getPostgresLoginBuf({ ...login_args, ...args });
+    client.write(authBuffer);
+  };
+
+  /**
+   * Initiate a login to the postgres server.
+   */
+  $emit.on("login.start", handleLoginRequest);
+
+  /**
+   * Handle an error being emitted.
+   */
+  $emit.on("login.error", (err) =>
+    debug(`ERROR: [${err.name}] - ${err.message} - ${err.stack}`)
+  );
+
+  /**
+   * BUild the connection result to beb returned to the user.
+   */
+
+  return new Promise<PgClient>((resolve, reject) => {
     client.connect({
-      port: 5432,
-      host: "localhost",
+      port: args.port,
+      host: args.hostname,
     });
 
     client.on("data", parseMessage);
 
     client.on("ready", () => {
-      client.write(getPostgresLoginBuf());
-      resolve(ret);
+      resolve({
+        ready: true,
+        client,
+        messageQueue,
+        login: (username: string, password: string) => {
+          $emit.emit("login.start", { username, password });
+        },
+      });
     });
 
     client.on("error", (error) => reject(error));
   });
-
-  return result;
 };
